@@ -3,3 +3,16 @@ name = "4labak"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-golden>=1.0.2",
+    "pyyaml>=6.0.3",
+    "ruff>=0.17.0",
+    "types-pyyaml>=6.0.12.20260906",
+]
+
+[tool.pytest.ini_options]
+enable_assertion_pass_hook = true
