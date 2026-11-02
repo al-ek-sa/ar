@@ -5,7 +5,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable
 
 REGISTERS = (
     "zero",
@@ -32,6 +32,15 @@ REGISTER_INDEX = {
 }
 
 WORD_SIZE = 4
+IMEM_SIZE = 0x1000
+DMEM_SIZE = 0x1000
+IO_LIMIT = 0x100
+DATA_START = 0x100
+INPUT_PORT = 0x80
+OUTPUT_PORT = 0x84
+CYCLE_PORT = 0x88
+RESET_VECTOR = 0x000
+IRQ_VECTOR = 0x004
 WORD_MASK = 0xFFFF_FFFF
 SHIFT_LIMIT = 32
 IMM12_BITS = 12
@@ -75,11 +84,15 @@ class Opcode(Enum):
     OR = "or"
     AND = "and"
     MUL = "mul"
+    MULHU = "mulhu"
     DIV = "div"
+    DIVU = "divu"
     REM = "rem"
+    REMU = "remu"
 
     ADDI = "addi"
     SLTI = "slti"
+    SLTIU = "sltiu"
     XORI = "xori"
     ORI = "ori"
     ANDI = "andi"
@@ -106,6 +119,7 @@ class Opcode(Enum):
     EI = "ei"
     DI = "di"
     IRET = "iret"
+    WFI = "wfi"
     HALT = "halt"
 
     @property
@@ -132,10 +146,14 @@ SPECS: dict[Opcode, Spec] = {
     Opcode.OR: Spec(Format.REGISTER, MAJOR_OP, 0b110, 0b0000000),
     Opcode.AND: Spec(Format.REGISTER, MAJOR_OP, 0b111, 0b0000000),
     Opcode.MUL: Spec(Format.REGISTER, MAJOR_OP, 0b000, 0b0000001),
+    Opcode.MULHU: Spec(Format.REGISTER, MAJOR_OP, 0b011, 0b0000001),
     Opcode.DIV: Spec(Format.REGISTER, MAJOR_OP, 0b100, 0b0000001),
+    Opcode.DIVU: Spec(Format.REGISTER, MAJOR_OP, 0b101, 0b0000001),
     Opcode.REM: Spec(Format.REGISTER, MAJOR_OP, 0b110, 0b0000001),
+    Opcode.REMU: Spec(Format.REGISTER, MAJOR_OP, 0b111, 0b0000001),
     Opcode.ADDI: Spec(Format.IMMEDIATE, MAJOR_OP_IMM, 0b000),
     Opcode.SLTI: Spec(Format.IMMEDIATE, MAJOR_OP_IMM, 0b010),
+    Opcode.SLTIU: Spec(Format.IMMEDIATE, MAJOR_OP_IMM, 0b011),
     Opcode.XORI: Spec(Format.IMMEDIATE, MAJOR_OP_IMM, 0b100),
     Opcode.ORI: Spec(Format.IMMEDIATE, MAJOR_OP_IMM, 0b110),
     Opcode.ANDI: Spec(Format.IMMEDIATE, MAJOR_OP_IMM, 0b111),
@@ -158,6 +176,7 @@ SPECS: dict[Opcode, Spec] = {
     Opcode.EI: Spec(Format.SYSTEM, MAJOR_CUSTOM0, 0b000),
     Opcode.DI: Spec(Format.SYSTEM, MAJOR_CUSTOM0, 0b001),
     Opcode.IRET: Spec(Format.SYSTEM, MAJOR_CUSTOM0, 0b010),
+    Opcode.WFI: Spec(Format.SYSTEM, MAJOR_CUSTOM0, 0b011),
     Opcode.HALT: Spec(Format.SYSTEM, MAJOR_CUSTOM0, 0b111),
 }
 FORMATS = {opcode: spec.fmt for opcode, spec in SPECS.items()}
@@ -318,18 +337,3 @@ def disassemble(instr: Instruction, address: int) -> str:
         case Format.SYSTEM:
             operands = ""
     return f"{instr.opcode.mnemonic} {operands}".rstrip()
-
-
-def listing_line(address: int, word: int) -> str:
-    return f"{address:04x} - {word:08X} - {disassemble(decode(word), address)}"
-
-
-def words_to_bytes(words: Iterable[int]) -> bytes:
-    return b"".join((word & WORD_MASK).to_bytes(WORD_SIZE, "little") for word in words)
-
-
-def bytes_to_words(data: bytes) -> list[int]:
-    if len(data) % WORD_SIZE:
-        msg = f"binary size {len(data)} is not a multiple of {WORD_SIZE}"
-        raise ValueError(msg)
-    return [int.from_bytes(data[i : i + WORD_SIZE], "little") for i in range(0, len(data), WORD_SIZE)]

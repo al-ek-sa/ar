@@ -7,13 +7,11 @@ from isa import (
     Format,
     Instruction,
     Opcode,
-    bytes_to_words,
     decode,
+    disassemble,
     encode,
-    listing_line,
     lower,
     upper,
-    words_to_bytes,
 )
 
 ZERO = REGISTER_INDEX["zero"]
@@ -95,12 +93,8 @@ def test_zero_word_is_illegal() -> None:
         decode(0)
 
 
-def test_listing() -> None:
-    assert listing_line(0x10, 0x00028863) == "0010 - 00028863 - beq t0, zero, 0x0020"
-    assert listing_line(0x08, 0x00052283) == "0008 - 00052283 - lw t0, 0(a0)"
-    assert listing_line(0x00, 0x12345537) == "0000 - 12345537 - lui a0, 0x12345"
-
-
-def test_binary_roundtrip() -> None:
-    words = [0x00128293, 0x0000700B, 0x00000000]
-    assert bytes_to_words(words_to_bytes(words)) == words
+def test_disassemble() -> None:
+    assert disassemble(decode(0x00028863), 0x10) == "beq t0, zero, 0x0020"
+    assert disassemble(decode(0x00052283), 0x08) == "lw t0, 0(a0)"
+    assert disassemble(decode(0x12345537), 0x00) == "lui a0, 0x12345"
+    assert disassemble(decode(0x0000700B), 0x00) == "halt"
